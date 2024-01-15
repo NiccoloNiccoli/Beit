@@ -13,14 +13,6 @@ import time
 
 from torch.utils.tensorboard import SummaryWriter
 
-#what are the steps to train a model?
-#1. load the data
-#2. define the model
-#3. define the loss function
-#4. define the optimizer
-#5. train the model
-#6. evaluate the model
-#7. save the model
 
 if __name__ == "__main__":
     writer = SummaryWriter()
@@ -58,18 +50,17 @@ if __name__ == "__main__":
     learning_rate = 1.5e-4
     #learning_rate = 0.0001
     epochs = 100
-    warmup_epochs = 0  # Number of warmup epochs
-    #define optimizer
+    warmup_epochs = 0 
+    
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), weight_decay=0.05)
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.05, momentum=0.9)
-    #define scheduler
+    
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=0)
     criterion = torch.nn.CrossEntropyLoss()
 
     tic = time.time()
     
     for epoch in range(epochs):
-        #train the model
         model.train()
         running_loss = 0.0
         for i, (img_full_size, img_half_size, _) in enumerate(train_loader):
@@ -96,8 +87,7 @@ if __name__ == "__main__":
                 writer.add_scalar("Training Loss", loss.item(), epoch * len(train_loader) + i)
             writer.add_scalar("Training Loss (1 point per epoch)", running_loss/(i+1), epoch)
         
-        if epoch < warmup_epochs:
-            # Adjust learning rate during warmup
+        if epoch < warmup_epochs :
             lr = learning_rate * (epoch + 1) / warmup_epochs
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
@@ -111,7 +101,6 @@ if __name__ == "__main__":
         if epoch % 10 == 0:
             torch.save(model.state_dict(), f"model_{epoch}.pth")
         if False:
-            #evaluate the model
             if epoch % 10 == 0:
                 model.eval()
                 with torch.no_grad():
