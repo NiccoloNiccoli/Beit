@@ -13,7 +13,6 @@ import time
 
 from torch.utils.tensorboard import SummaryWriter
 
-
 if __name__ == "__main__":
     writer = SummaryWriter()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -41,26 +40,24 @@ if __name__ == "__main__":
     return_all_tokens = False
 
     model = VisionTransformer(img_size = image_size, return_all_tokens=return_all_tokens, patch_size=8, embed_dim=192, depth = 8).to(device)
+    model.load_state_dict(torch.load("model_70.pth"))
     d_vae = DallE_VAE(vt_image_size).to(device)
     d_vae.load_model("dall_e/models/", device)
 
     print("Device: ", device)
     print("Params: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
-    learning_rate = 1.5e-4
-    #learning_rate = 0.0001
+    learning_rate = 1.5e-3
     epochs = 100
     warmup_epochs = 0 
-    
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), weight_decay=0.05)
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.05, momentum=0.9)
-    
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=0)
     criterion = torch.nn.CrossEntropyLoss()
 
     tic = time.time()
     
-    for epoch in range(epochs):
+    for epoch in range(11, epochs):
         model.train()
         running_loss = 0.0
         for i, (img_full_size, img_half_size, _) in enumerate(train_loader):
@@ -87,7 +84,7 @@ if __name__ == "__main__":
                 writer.add_scalar("Training Loss", loss.item(), epoch * len(train_loader) + i)
             writer.add_scalar("Training Loss (1 point per epoch)", running_loss/(i+1), epoch)
         
-        if epoch < warmup_epochs :
+        if epoch < warmup_epochs:
             lr = learning_rate * (epoch + 1) / warmup_epochs
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr

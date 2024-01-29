@@ -79,7 +79,7 @@ class VisionTransformer(nn.Module):
         ])
         self.norm = nn.LayerNorm(embed_dim, eps = 1e-6)
 
-        #self.head = nn.Linear(embed_dim, vocab_size)
+        #self.head = nn.Linear(embed_dim, 10)
         self.head = nn.Sequential(
             nn.Linear(embed_dim, embed_dim * 4),
             nn.Linear(embed_dim * 4, vocab_size)
@@ -128,20 +128,24 @@ class VisionTransformer(nn.Module):
         logits : torch.Tensor
             Logits over all classes.
         """
+
+        
         n_samples = x.shape[0]
         x = self.patch_embed(x)
         batch_size, seq_len, embed_dim = x.shape
 
-        mask = self.masking_generator.generate_mask().flatten() #(n_patches)
-        mask = mask.unsqueeze(0) #(1, n_patches)
-        batch_of_masks = mask.repeat(n_samples, 1) #(n_samples, n_patches) #bools
+        if False:
+            mask = self.masking_generator.generate_mask().flatten() #(n_patches)
+            mask = mask.unsqueeze(0) #(1, n_patches)
+            batch_of_masks = mask.repeat(n_samples, 1) #(n_samples, n_patches) #bools
 
-        mask_token = self.mask_token.expand(batch_size, seq_len, -1) #(n_samples, n_patches, embed_dim) #ints
+            mask_token = self.mask_token.expand(batch_size, seq_len, -1) #(n_samples, n_patches, embed_dim) #ints
 
-        w = batch_of_masks.unsqueeze(-1).type_as(mask_token) #(n_samples, n_patches, 1) #ints
-        #print("w.shape: ", w.shape, w.dtype)       
-        x = x * (1 - w) + w * mask_token #(n_samples, n_patches, embed_dim)
-
+            w = batch_of_masks.unsqueeze(-1).type_as(mask_token) #(n_samples, n_patches, 1) #ints
+            #print("w.shape: ", w.shape, w.dtype)       
+            x = x * (1 - w) + w * mask_token #(n_samples, n_patches, embed_dim)
+        else:
+            batch_of_masks = None
         cls_token = self.cls_token.expand(n_samples, -1, -1) #(n_samples, 1, embed_dim)
         x = torch.cat((cls_token, x), dim = 1) #(n_samples, 1 + n_patches, embed_dim)
         x = x + self.pos_embed #(n_samples, 1 + n_patches, embed_dim)
@@ -152,9 +156,12 @@ class VisionTransformer(nn.Module):
 
         x = self.norm(x)
 
-        x = x[:, 1:] #(n_samples, n_patches, embed_dim)
-        #print("x.shape: ", x.shape, x.dtype)
-        
+        if False:
+            x = x[:, 1:] #(n_samples, n_patches, embed_dim)
+            #print("x.shape: ", x.shape, x.dtype)
+        else:
+            x = x[:, 0] #(n_samples, embed_dim)
+
         if self.return_all_tokens:
             x = self.head(x) #(n_samples, n_patches, vocab_size)
             return x, batch_of_masks
